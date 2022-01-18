@@ -127,11 +127,10 @@ function addIndexToMap(emojiMap, key, ...indexes) {
     emojiMap.set(key, newList);
 }
 
-function genSkinVariations(emoji, index, nextOrder) {
+function genSkinVariations(emoji) {
     if (!emoji.skin_variations) {
         return [];
     }
-    let order = nextOrder;
     return Object.keys(emoji.skin_variations).map((skinCode) => {
         // if skin codes ever change this will produce a null_light_skin_tone
         const skins = skinCode.split('-');
@@ -144,10 +143,68 @@ function genSkinVariations(emoji, index, nextOrder) {
         variation.category = emoji.category;
         variation.subcategory = emoji.subcategory;
         variation.skins = skins;
-        variation.source_index = index;
-        variation.sort_order = order++;
         return variation;
     });
+}
+
+function trimPropertiesFromEmoji(emoji, emojiKeys) {
+    if (emojiKeys.includes('non_qualified')) {
+        Reflect.deleteProperty(emoji, 'non_qualified');
+    }
+
+    if (emojiKeys.includes('docomo')) {
+        Reflect.deleteProperty(emoji, 'docomo');
+    }
+
+    if (emojiKeys.includes('au')) {
+        Reflect.deleteProperty(emoji, 'au');
+    }
+
+    if (emojiKeys.includes('softbank')) {
+        Reflect.deleteProperty(emoji, 'softbank');
+    }
+
+    if (emojiKeys.includes('google')) {
+        Reflect.deleteProperty(emoji, 'google');
+    }
+
+    if (emojiKeys.includes('sheet_x')) {
+        Reflect.deleteProperty(emoji, 'sheet_x');
+    }
+
+    if (emojiKeys.includes('sheet_y')) {
+        Reflect.deleteProperty(emoji, 'sheet_y');
+    }
+
+    if (emojiKeys.includes('added_in')) {
+        Reflect.deleteProperty(emoji, 'added_in');
+    }
+
+    if (emojiKeys.includes('has_img_apple')) {
+        Reflect.deleteProperty(emoji, 'has_img_apple');
+    }
+
+    if (emojiKeys.includes('has_img_google')) {
+        Reflect.deleteProperty(emoji, 'has_img_google');
+    }
+
+    if (emojiKeys.includes('has_img_twitter')) {
+        Reflect.deleteProperty(emoji, 'has_img_twitter');
+    }
+
+    if (emojiKeys.includes('has_img_facebook')) {
+        Reflect.deleteProperty(emoji, 'has_img_facebook');
+    }
+
+    if (emojiKeys.includes('source_index')) {
+        Reflect.deleteProperty(emoji, 'source_index');
+    }
+
+    if (emojiKeys.includes('sort_order')) {
+        Reflect.deleteProperty(emoji, 'sort_order');
+    }
+
+    return emoji;
 }
 
 // Extract excluded emoji shortnames as an array
@@ -165,11 +222,9 @@ const filteredEmojiJson = jsonData.filter((element) => {
 });
 
 // populate skin tones as full emojis
-let nextOrder = filteredEmojiJson.length;
 const fullEmoji = [...filteredEmojiJson];
-filteredEmojiJson.forEach((emoji, index) => {
-    const variations = genSkinVariations(emoji, index, nextOrder);
-    nextOrder += variations.length;
+filteredEmojiJson.forEach((emoji) => {
+    const variations = genSkinVariations(emoji);
     fullEmoji.push(...variations);
 });
 
@@ -224,8 +279,11 @@ fullEmoji.forEach((emoji, index) => {
     emojiImagesByAlias.push(...emoji.short_names.map((alias) => `"${alias}": "${file}"`));
 });
 
+// Removed properties that are not needed for the webapp
+const trimmedDownEmojis = fullEmoji.map((emoji) => trimPropertiesFromEmoji(emoji, Object.keys(emoji)));
+
 // write emoji.json
-endResults.push(writeFile('emoji.json', 'utils/emoji.json', JSON.stringify(fullEmoji)));
+endResults.push(writeFile('emoji.json', 'utils/emoji.json', JSON.stringify(trimmedDownEmojis)));
 
 const categoryList = Object.keys(jsonCategories).filter((item) => item !== 'Component').map(convertCategory);
 const categoryNames = ['recent', ...categoryList, 'custom'];
